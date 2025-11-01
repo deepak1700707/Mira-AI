@@ -9,4 +9,8 @@ tavily-python
 langchain-community
 soundfile
 pygame
-transformers
+transformers<4.50.0
+ddgs
+numpy<2
+langchain-ollama
+certifi
