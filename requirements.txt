@@ -10,3 +10,5 @@ langchain-community
 soundfile
 pygame
 transformers
+ddgs
+edge_tts
