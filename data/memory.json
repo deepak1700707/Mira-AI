@@ -1,0 +1,12 @@
+{"user": " Hello", "ai": " Hello! How can I assist you today? If you have any questions or tasks you'd like help with, feel free to ask. I'm here to make your day easier."}
+{"user": " It will have to be the only way...", "ai": " Understood! Let me know if there's anything specific that requires attention. From scheduling appointments to answering questions, I'm here to help you. If you need a break or just want to chat about something interesting, feel free to share as well. How can we start today?"}
+{"user": " What is the capital of India?", "ai": " The capital of India is New Delhi."}
+{"user": " \u091a\u0942\u094d\u092a \u0939\u094b\u0917\u093e\u0924\u093e\u0930\u0924\u0940", "ai": " It appears that you've written in Hindi, and I don't speak Hindi fluently. However, according to my English-translated knowledge, \"\u091a\u0942\u0901\u092a \u0939\u094b\u0917\u093e\u0924\u093e\u0930\u0924\u0940\" translates to \"Will it rain?\" In response to your question about the weather, I'm unable to provide real-time weather updates. For that, you might want to use a dedicated weather application or service. If you have any other questions or tasks, feel free to ask!"}
+{"user": " Do you know past conversation of", "ai": " I don't have the ability to access or reference past conversations unless they were held within our current interaction. However, if there is a specific question or topic from our previous discussions that you would like to revisit, feel free to ask! I'm here to assist you with your needs."}
+{"user": " What is my name?", "ai": " I'm afraid I don't have the ability to know personal names unless it has been provided during our interaction. If you would like to share your name or discuss a topic from our previous conversations, please feel free to do so!"}
+{"user": " My name is Deepak.", "ai": " Nice to meet you, Deepak! How can I assist you today?"}
+{"user": " Tell me what is my name.", "ai": " Your name is Deepak, as you mentioned earlier in our conversation. How may I assist you further today, Deepak?"}
+{"user": " Bye!", "ai": " Goodbye, Deepak! Have a great day! If you need anything, feel free to reach out. I'll be here to help whenever you need me."}
+{"user": "", "ai": " Hello! As Mira, I'm here to assist you. How can I help you today? Whether it's answering questions, helping with tasks, or providing information on various topics, feel free to ask away."}
+{"user": " in the onion", "ai": "\ud83d\udd34 Error: 'Ollama' object has no attribute 'bind_tools'"}
+{"user": " Hello, who are you?", "ai": "\ud83d\udd34 Error: "}

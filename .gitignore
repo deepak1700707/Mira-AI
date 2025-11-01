@@ -1,0 +1,15 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+pip-log.txt
+dist/
+build/
+*.egg-info/
+.idea/
+.vscode/
+.DS_Store

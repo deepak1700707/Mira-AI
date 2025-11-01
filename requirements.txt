@@ -1,0 +1,12 @@
+langchain 
+ollama 
+openai-whisper 
+gtts 
+sounddevice 
+scipy 
+requests 
+tavily-python
+langchain-community
+soundfile
+pygame
+transformers
