@@ -1,39 +1,7 @@
-# # from gtts import gTTS
-# # import os
-
-# # def speak(text):
-# #     tts = gTTS(text)
-# #     tts.save("reply.mp3")
-# #     os.system("mpg123 reply.mp3")
-
-# from gtts import gTTS
-# import os
-# import tempfile
-# import playsound
-
-# def speak(text, lang="hi"):
-#     """
-#     Convert text to speech and play it.
-#     Automatically supports English, Hindi, or mixed text.
-#     """
-#     # Detect Hindi or English content to set correct language
-#     if any("\u0900" <= ch <= "\u097F" for ch in text):  # Hindi unicode range
-#         lang = "hi"
-#     else:
-#         lang = "en"
-
-#     try:
-#         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-#             tts = gTTS(text=text, lang=lang)
-#             tts.save(fp.name)
-#             playsound.playsound(fp.name)
-#     except Exception as e:
-#         print(f"🔴 Error in speak(): {e}")
-#     finally:
-#         try:
-#             os.remove(fp.name)
-#         except Exception:
-#             pass
+"""
+Text-to-speech module using Edge TTS.
+Supports bilingual (Hindi/English) speech with emotion-based voice modulation.
+"""
 import asyncio
 import tempfile
 import pygame
@@ -41,8 +9,8 @@ import os
 import re
 import edge_tts
 
-# ✅ Remove emojis before speaking
 def remove_emojis(text):
+    """Remove emojis from text before speaking."""
     emoji_pattern = re.compile(
         "[" 
         "\U0001F600-\U0001F64F"  # Emoticons
@@ -53,11 +21,18 @@ def remove_emojis(text):
     )
     return emoji_pattern.sub('', text)
 
-# 🎭 Main async TTS
 async def _speak_async(text, lang="en", emotion="neutral"):
+    """
+    Async function to convert text to speech.
+    
+    Args:
+        text: Text to speak
+        lang: Language code ("en" or "hi")
+        emotion: Emotional tone ("neutral", "happy", "sad", "angry")
+    """
     text = remove_emojis(text)
 
-    # 🎙️ Language-based neural voices
+    # Language-based neural voices
     voices = {
         "en": {
             "neutral": "en-US-JennyNeural",
@@ -73,38 +48,53 @@ async def _speak_async(text, lang="en", emotion="neutral"):
         }
     }
 
-    # 🎧 Choose the right voice
+    # Choose the right voice
     lang_voices = voices.get(lang, voices["en"])
     voice = lang_voices.get(emotion, lang_voices["neutral"])
 
-    # 🔊 Adjust speed & pitch slightly based on emotion
+    # Adjust speed & pitch slightly based on emotion
     rate_map = {
         "happy": "+15%",   # faster and energetic
         "sad": "-10%",     # slower and calm
         "angry": "+5%",    # firm and slightly faster
-        "neutral": "+0%"   # normal rate (fix)
+        "neutral": "+0%"   # normal rate
     }
     rate = rate_map.get(emotion, "0%")
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
         file_path = fp.name
 
-    # Generate & save speech
-    tts = edge_tts.Communicate(text=text, voice=voice, rate=rate)
-    await tts.save(file_path)
+    try:
+        # Generate & save speech
+        tts = edge_tts.Communicate(text=text, voice=voice, rate=rate)
+        await tts.save(file_path)
 
-    # 🎵 Play audio
-    pygame.mixer.init()
-    pygame.mixer.music.load(file_path)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)
-    pygame.mixer.quit()
+        # Play audio
+        pygame.mixer.init()
+        pygame.mixer.music.load(file_path)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
+        pygame.mixer.quit()
+    finally:
+        # Clean up temp file
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
 
-    os.remove(file_path)
-
-# 🌐 Wrapper
 def speak(text, emotion="neutral"):
-    """Automatically detect Hindi/English and use correct accent."""
+    """
+    Convert text to speech with automatic language detection.
+    
+    Args:
+        text: Text to speak (automatically detects Hindi/English)
+        emotion: Emotional tone for voice modulation
+    """
+    # Automatically detect Hindi/English and use correct accent
     lang = "hi" if any("\u0900" <= ch <= "\u097F" for ch in text) else "en"
-    asyncio.run(_speak_async(text, lang, emotion))
+    
+    try:
+        asyncio.run(_speak_async(text, lang, emotion))
+    except Exception as e:
+        print(f"⚠️ Error in text-to-speech: {e}")

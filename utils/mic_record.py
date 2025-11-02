@@ -1,144 +1,175 @@
-# # import sounddevice as sd
-# # from scipy.io.wavfile import write
-# # import numpy as np
-# # import soundfile as sf
-
-# # def record_audio(filename="command.wav", duration=5, device_index=0):
-# #     fs = 44100  # Standard Whisper sampling rate
-# #     print("🎙️ Recording... Speak now!")
-
-# #     # Record audio from selected device
-# #     audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float32', device=device_index)
-# #     sd.wait()
-
-# #     # Check for silence
-# #     if np.max(np.abs(audio)) < 0.01:
-# #         print("⚠️ Warning: Audio seems too quiet. Try speaking louder or closer to mic.")
-
-# #     # Normalize volume safely
-# #     max_val = np.max(np.abs(audio))
-# #     if max_val > 0:
-# #         audio = audio / max_val
-
-# #     # Save using soundfile (better float precision & metadata)
-# #     sf.write(filename, audio, fs)
-# #     print(f"✅ Saved recording to {filename}")
-
-
-
-# # import whisper
-# # import torch
-# # import numpy as np
-# # import soundfile as sf
-
-# # def record_audio(audio_file):
-# #     # Step 1: Load model safely
-# #     use_gpu = torch.cuda.is_available()
-# #     device = "cuda" if use_gpu else "cpu"
-# #     print(f"🧠 Loading Whisper model on {device}...")
-
-# #     # model = whisper.load_model("base", device=device)
-# #     model = whisper.load_model("base").to(dtype=torch.float32)  # 👈 full precision
-
-# #     # Force model to run in float32 even on GPU
-# #     model = model.to(torch.float32)
-
-# #     # Step 2: Warn if audio too quiet
-# #     data, sr = sf.read(audio_file)
-# #     if np.abs(data).mean() < 0.01:
-# #         print("⚠️ Audio is very quiet. Try speaking louder or closer to mic.")
-
-# #     # Step 3: Transcribe with safe settings
-# #     print("🎧 Transcribing...")
-# #     try:
-# #         result = model.transcribe(audio_file, fp16=False, temperature=0.0)
-# #         print("✅ Transcription successful!")
-# #         return result["text"]
-# #     except Exception as e:
-# #         print(f"⚠️ GPU error: {e}")
-# #         print("➡️ Retrying on CPU...")
-# #         torch.cuda.empty_cache()
-# #         model = whisper.load_model("base", device="cpu")
-# #         result = model.transcribe(audio_file, fp16=False)
-# #         return result["text"]
-
-
-# import sounddevice as sd
-# import numpy as np
-# import soundfile as sf
-# import whisper
-# import torch
-
-# # 🎙️ Record Audio Function
-# def record_audio(filename="command.wav", duration=5, device_index=0):
-#     fs = 44100  # Whisper standard sampling rate
-#     print("🎙️ Recording... Speak now!")
-
-#     # Record from mic
-#     audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float32', device=device_index)
-#     sd.wait()
-
-#     # Silence check
-#     if np.max(np.abs(audio)) < 0.01:
-#         print("⚠️ Warning: Audio seems too quiet. Try speaking louder or closer to the mic.")
-
-#     # Normalize safely
-#     max_val = np.max(np.abs(audio))
-#     if max_val > 0:
-#         audio = audio / max_val
-
-#     # Save with high-quality precision
-#     sf.write(filename, audio, fs)
-#     print(f"✅ Saved recording to {filename}")
-
-# # 🎧 Transcription Function (GPU-safe)
-# def transcribe_audio(audio_file):
-#     print("🧠 Loading Whisper model...")
-#     model = whisper.load_model("base")
-
-#     # GPU-safe: use CUDA if available, disable autocast for stability
-#     if torch.cuda.is_available():
-#         model = model.to("cuda")
-#         print("⚙️ Using GPU for transcription (safe mode).")
-#         with torch.inference_mode():
-#             with torch.cuda.amp.autocast(enabled=False):
-#                 result = model.transcribe(audio_file)
-#     else:
-#         print("⚙️ Using CPU for transcription.")
-#         result = model.transcribe(audio_file)
-
-#     text = result["text"].strip()
-#     print("\n📝 Transcription:")
-#     print(text)
-
-#     # Save to file
-#     with open("output.txt", "w", encoding="utf-8") as f:
-#         f.write(text)
-#     print("✅ Transcription saved to output.txt")
-
-
-# # 🚀 Main Script
-# if __name__ == "__main__":
-#     record_audio("command.wav", duration=5, device_index=0)  # change index if needed
-#     transcribe_audio("command.wav")
-
-
-
+"""
+Audio recording module with Voice Activity Detection (VAD) support.
+Detects when user is speaking and stops recording automatically.
+"""
 import sounddevice as sd
 from scipy.io.wavfile import write
+import numpy as np
+import os
 
+# Load .env file if available (must be done before reading env vars)
+try:
+    from dotenv import load_dotenv
+    from pathlib import Path
+    # Load .env from project root (parent of utils directory)
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+    else:
+        # Try current directory
+        load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed
+except Exception:
+    pass  # Ignore errors, will use default values
 
-# 🎙️ Record audio
-def record_audio(filename="command.wav", duration=5):
-    fs = 44100
+try:
+    import webrtcvad
+    VAD_AVAILABLE = True
+except ImportError:
+    VAD_AVAILABLE = False
+    print("⚠️ Warning: webrtcvad not available. Install with: pip install webrtcvad")
+
+def record_audio(filename="command.wav", duration=30, use_vad=True, silence_duration=1.5):
+    """
+    Record audio from microphone with optional Voice Activity Detection.
+    
+    Args:
+        filename: Output filename for the recording
+        duration: Maximum recording duration in seconds (used if VAD disabled or falls back)
+        use_vad: Enable Voice Activity Detection for automatic stop
+        silence_duration: Seconds of silence before stopping (VAD only)
+        
+    Returns:
+        str: Path to saved audio file
+    """
+    fs = 44100  # Sample rate
+    
+    # Get duration from environment if available (override default parameter)
+    env_duration = os.getenv("RECORDING_DURATION")
+    if env_duration:
+        try:
+            duration = int(env_duration)
+            print(f"📝 Using duration from .env: {duration} seconds")
+        except ValueError:
+            print(f"⚠️ Warning: Invalid RECORDING_DURATION value: {env_duration}, using default: {duration}")
+    else:
+        print(f"📝 Using default duration: {duration} seconds (RECORDING_DURATION not set in .env)")
+    
+    # Check if VAD should be used
+    vad_enabled = use_vad
+    env_vad = os.getenv("VAD_ENABLED", "true").lower()
+    if env_vad in ("false", "0", "no"):
+        vad_enabled = False
+    
+    if vad_enabled and VAD_AVAILABLE:
+        return _record_with_vad(filename, fs, silence_duration, max_duration=duration)
+    else:
+        if not VAD_AVAILABLE and use_vad:
+            print("⚠️ VAD not available, using fixed duration recording")
+        return _record_fixed_duration(filename, fs, duration)
+
+def _record_fixed_duration(filename, fs, duration):
+    """Record audio for a fixed duration."""
     print("🎙️ Recording... Speak now!")
+    print(f"⏱️ Recording for {duration} seconds...")
+    
     audio = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
     sd.wait()
+    
+    # Check for silence
+    if np.max(np.abs(audio)) < 1000:  # Very quiet threshold
+        print("⚠️ Warning: Audio seems too quiet. Try speaking louder or closer to mic.")
+    
     write(filename, fs, audio)
     print(f"✅ Audio saved as {filename}")
+    return filename
 
+def _record_with_vad(filename, fs, silence_duration, max_duration=60):
+    """
+    Record audio with Voice Activity Detection using simple amplitude-based detection.
+    Stops recording after detecting silence.
+    
+    Args:
+        filename: Output filename
+        fs: Sample rate
+        silence_duration: Seconds of silence before stopping
+        max_duration: Maximum recording duration in seconds (default 60)
+    """
+    print("🎙️ Recording with Voice Activity Detection...")
+    print("💬 Speak now! (Will stop automatically after silence)")
+    print(f"⏱️ Maximum duration: {max_duration} seconds")
+    
+    frame_duration = 0.1  # 100ms frames for VAD
+    frame_size = int(fs * frame_duration)
+    
+    audio_frames = []
+    last_speech_frame = 0
+    silence_threshold_frames = int(silence_duration / frame_duration)
+    
+    max_frames = int(max_duration / frame_duration)
+    
+    # Amplitude threshold for speech detection (adjustable - can be tuned via env)
+    import os
+    env_threshold = os.getenv("VAD_THRESHOLD", "")
+    if env_threshold:
+        try:
+            speech_threshold = int(float(env_threshold) * 32767)  # Convert to int16 range
+        except ValueError:
+            speech_threshold = 2000
+    else:
+        speech_threshold = 2000
+    
+    try:
+        with sd.InputStream(samplerate=fs, channels=1, dtype='int16', 
+                           blocksize=frame_size) as stream:
+            frames_collected = 0
+            speech_detected = False
+            
+            while frames_collected < max_frames:
+                # Read audio chunk
+                audio_chunk, overflowed = stream.read(frame_size)
+                if overflowed:
+                    print("⚠️ Audio buffer overflow")
+                
+                audio_frames.append(audio_chunk)
+                frames_collected += 1
+                
+                # Simple amplitude-based speech detection
+                max_amplitude = np.max(np.abs(audio_chunk))
+                is_speech = max_amplitude > speech_threshold
+                
+                if is_speech:
+                    if not speech_detected:
+                        speech_detected = True
+                        print("🗣️ Speech detected...", end="", flush=True)
+                    last_speech_frame = frames_collected
+                else:
+                    # Stop if we've had enough silence after speech was detected
+                    if speech_detected and (frames_collected - last_speech_frame) >= silence_threshold_frames:
+                        print("\n✅ Recording stopped (silence detected)")
+                        break
+                    elif frames_collected % 10 == 0:  # Print dots every second
+                        print(".", end="", flush=True)
+            
+            if frames_collected >= max_frames:
+                print(f"\n⚠️ Maximum duration ({max_duration}s) reached")
+            elif not speech_detected:
+                print("\n⚠️ No speech detected, using full recording")
+        
+        # Combine all frames
+        if audio_frames:
+            audio = np.concatenate(audio_frames, axis=0)
+            write(filename, fs, audio)
+            duration = len(audio) / fs
+            print(f"✅ Audio saved as {filename} ({duration:.1f}s)")
+            return filename
+        else:
+            print("❌ No audio recorded")
+            return None
+            
+    except Exception as e:
+        print(f"⚠️ VAD recording error: {e}")
+        print(f"🔄 Falling back to fixed duration recording ({max_duration}s)...")
+        return _record_fixed_duration(filename, fs, duration=max_duration)
 
-# # 🚀 Run the pipeline
-# if __name__ == "__main__":
-#     record_audio(duration=5)
-#     transcribe_audio("command.wav")

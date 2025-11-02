@@ -1,0 +1,7 @@
+# Optional dependencies that may require additional build tools
+
+# Voice Activity Detection (optional - VAD works without this using amplitude detection)
+# Install only if you have Visual Studio Build Tools or a C/C++ compiler
+# On Windows: Install "Microsoft C++ Build Tools" from https://visualstudio.microsoft.com/visual-cpp-build-tools/
+webrtcvad>=2.0.10
+

@@ -13,3 +13,16 @@ build/
 .idea/
 .vscode/
 .DS_Store
+
+# Project specific
+command.wav
+reply.mp3
+output.txt
+*.wav
+*.mp3
+*.log
+data/memory.json.bak
+test.wav
+
+# Runtime directory (all generated files)
+runtime/
