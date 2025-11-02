@@ -12,7 +12,6 @@ soundfile>=0.12.1
 scipy>=1.10.0
 numpy>=1.24.0
 pygame>=2.5.0
-
 # Text-to-Speech
 edge-tts>=6.1.0
 gtts>=2.4.0
