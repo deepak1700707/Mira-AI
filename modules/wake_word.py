@@ -36,32 +36,26 @@ def detect_wake_word_keyword(text: str, wake_words: list = None) -> bool:
     return False
 
 class WakeWordDetector:
-    """Wake word detector using Porcupine (primary) or keyword fallback."""
-    
-    def __init__(self, wake_word: str = "hey-mira", sensitivity: float = 0.5):
-        """
-        Initialize wake word detector.
-        
-        Args:
-            wake_word: Wake word to detect (for Porcupine) or keyword list
-            sensitivity: Detection sensitivity (0.0 to 1.0, higher = more sensitive)
-        """
+    def __init__(self, wake_word: str = "hey-mira", sensitivity: float = 0.5, access_key: str = None):
         self.wake_word = wake_word
         self.sensitivity = sensitivity
+        self.access_key = access_key
         self.porcupine = None
         self.use_porcupine = False
-        
-        # Try to initialize Porcupine
+
         if PORCUPINE_AVAILABLE:
             try:
-                # Use built-in wake words (works offline, no API key needed for built-ins)
-                # Available: "hey-mira", "hey siri", "alexa", etc.
+                if not access_key:
+                    raise ValueError("Porcupine Access Key required! Get it from https://console.picovoice.ai")
+
                 self.porcupine = pvporcupine.create(
+                    access_key=access_key,
                     keywords=[wake_word],
                     sensitivities=[sensitivity]
                 )
                 self.use_porcupine = True
                 print(f"[OK] Wake word detection enabled (Porcupine): '{wake_word}'")
+
             except Exception as e:
                 print(f"[WARNING] Porcupine initialization failed: {e}")
                 print("[INFO] Falling back to keyword-based detection")

@@ -22,6 +22,7 @@ output.txt
 *.mp3
 *.log
 data/memory.json.bak
+data/config.json
 test.wav
 
 # Runtime directory (all generated files)
